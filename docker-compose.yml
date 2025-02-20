@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  nginx:
+    build: ./nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./hexo-engine/public:/usr/share/nginx/html  # Hexo静态文件
+      - ./editor/dist:/usr/share/nginx/admin        # 管理后台前端
+      - nginx_cache:/var/cache/nginx
+    depends_on:
+      - backend
+      - hexo
+    networks:
+      - blog-net
+
+  backend:
+    build: ./backend
+    environment:
+      - ENV=production
+    volumes:
+      - ./hexo-engine/source:/app/hexo-source
+    networks:
+      - blog-net
+
+  hexo:
+    build: ./hexo-engine
+    volumes:
+      - ./hexo-engine/source:/app/source
+      - ./hexo-engine/public:/app/public
+    networks:
+      - blog-net
+
+  db:
+    image: postgres:15
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: blog@123
+    networks:
+      - blog-net
+
+  minio:
+    image: minio/minio
+    volumes:
+      - minio_data:/data
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: admin123
+    command: server /data
+    networks:
+      - blog-net
+
+volumes:
+  pg_data:
+  minio_data:
+  nginx_cache:
+
+networks:
+  blog-net:
+    driver: bridge
